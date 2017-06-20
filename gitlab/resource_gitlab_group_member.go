@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
+// bob
 func resourceGitlabGroupMember() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceGitlabGroupMemberCreate,
