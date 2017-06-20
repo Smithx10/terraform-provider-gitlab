@@ -2,8 +2,9 @@ package gitlab
 
 import (
 	"fmt"
-	gitlab "go-gitlab"
 	"log"
+
+	gitlab "github.com/xanzy/go-gitlab"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -37,7 +38,8 @@ func resourceGitlabGroupMember() *schema.Resource {
 func resourceGitlabGroupMemberCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*gitlab.Client)
 	options := &gitlab.AddGroupMemberOptions{
-		UserID: gitlab.Int(d.Get("user_id").(int)),
+		UserID:      gitlab.Int(d.Get("user_id").(int)),
+		AccessLevel: gitlab.AccessLevel(d.Get("accesslevel").(gitlab.AccessLevelValue)),
 	}
 
 	log.Printf("[DEBUG] create gitlab member %q", options.UserID)
@@ -53,13 +55,16 @@ func resourceGitlabGroupMemberCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceGitlabGroupMemberRead(d *schema.ResourceData, meta interface{}) error {
+	fmt.Print("insideread")
 	return nil
 }
 
 func resourceGitlabGroupMemberUpdate(d *schema.ResourceData, meta interface{}) error {
+	fmt.Print("insideupdate")
 	return nil
 }
 
 func resourceGitlabGroupMemberDelete(d *schema.ResourceData, meta interface{}) error {
+	fmt.Print("insidedelete")
 	return nil
 }
