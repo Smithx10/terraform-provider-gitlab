@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-// bob
 func resourceGitlabGroupMember() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceGitlabGroupMemberCreate,
@@ -37,9 +36,15 @@ func resourceGitlabGroupMember() *schema.Resource {
 
 func resourceGitlabGroupMemberCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*gitlab.Client)
+	aLevel, ok := d.Get("accesslevel").(gitlab.AccessLevelValue)
+	if ok {
+		fmt.Printf("Int value is %d\n", aLevel)
+	} else {
+		fmt.Printf("Value is not a Int\n")
+	}
 	options := &gitlab.AddGroupMemberOptions{
 		UserID:      gitlab.Int(d.Get("user_id").(int)),
-		AccessLevel: gitlab.AccessLevel(d.Get("accesslevel").(gitlab.AccessLevelValue)),
+		AccessLevel: gitlab.AccessLevel(aLevel),
 	}
 
 	log.Printf("[DEBUG] create gitlab member %q", options.UserID)
