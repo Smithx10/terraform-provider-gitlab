@@ -64,14 +64,14 @@ func resourceGitlabGroupMemberCreate(d *schema.ResourceData, meta interface{}) e
 	}
 
 	// Type Covnert schema.TypeInt to gitlab.AccessLevelValue
-	a, ok := d.Get("access_level").(gitlab.AccessLevelValue)
-	if ok {
-		fmt.Printf("Int value is %d\n", a)
-	} else {
-		fmt.Println("wrong type for access level, expected int")
-	}
-	// Define AddGroupMemberOptions with values from schema
-	l := &gitlab.AddGroupMemberOptions{
+	a := gitlab.AccessLevel(10)
+	// a, ok := d.Get("access_level")
+	// if ok {
+	// 	fmt.Printf("Int value is %d\n", a)
+	// }
+	// q.Q(a, ok, d.Get)
+	// Define AddGroupMemberOptions with values from schemaa
+	l := gitlab.AddGroupMemberOptions{
 		UserID:      gitlab.Int(u),
 		AccessLevel: gitlab.AccessLevel(a),
 	}
