@@ -5,6 +5,7 @@ import (
 	"log"
 
 	gitlab "github.com/xanzy/go-gitlab"
+	"github.com/y0ssar1an/q"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -64,14 +65,15 @@ func resourceGitlabGroupMemberCreate(d *schema.ResourceData, meta interface{}) e
 	}
 
 	// Type Covnert schema.TypeInt to gitlab.AccessLevelValue
-	a := gitlab.AccessLevel(10)
-	// a, ok := d.Get("access_level")
-	// if ok {
-	// 	fmt.Printf("Int value is %d\n", a)
-	// }
-	// q.Q(a, ok, d.Get)
-	// Define AddGroupMemberOptions with values from schemaa
-	l := gitlab.AddGroupMemberOptions{
+	a, ok := d.Get("access_level").(gitlab.AccessLevelValue)
+	if ok {
+		fmt.Printf("Int value is %d\n", a)
+	} else {
+		fmt.Println("wrong type for access level, expected int")
+	}
+	q.Q(a, ok, d.Get("access_level"))
+	// Define AddGroupMemberOptions with values from schema
+	l := &gitlab.AddGroupMemberOptions{
 		UserID:      gitlab.Int(u),
 		AccessLevel: gitlab.AccessLevel(a),
 	}
@@ -107,10 +109,6 @@ func resourceGitlabGroupMemberDelete(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
-
 	_, err1 := client.Groups.RemoveGroupMember(t, n)
-	if err1 != nil {
-		return fmt.Errorf("%v", err1)
-	}
-	return nil
+	return err1
 }
