@@ -14,18 +14,18 @@ func resourceGitlabGroupMember() *schema.Resource {
 		Create: resourceGitlabGroupMemberCreate,
 		Read:   resourceGitlabGroupMemberRead,
 		Update: resourceGitlabGroupMemberUpdate,
-		Delete: resourceGitlabGroupDelete,
+		Delete: resourceGitlabGroupMemberDelete,
 
 		Schema: map[string]*schema.Schema{
-			"username": {
+			"user_name": {
 				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"user_id": {
-				Type:     schema.TypeInt,
 				Required: true,
 			},
-			"accesslevel": {
+			"group_name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"access_level": {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  30,
@@ -34,27 +34,56 @@ func resourceGitlabGroupMember() *schema.Resource {
 	}
 }
 
-func resourceGitlabGroupMemberCreate(d *schema.ResourceData, meta interface{}) error {
+// function to convert usernames to userids
+func convertUNtoID(un string, meta interface{}) (int, error) {
 	client := meta.(*gitlab.Client)
-	aLevel, ok := d.Get("accesslevel").(gitlab.AccessLevelValue)
+
+	l := &gitlab.ListUsersOptions{
+		Username: gitlab.String(un),
+	}
+
+	u, _, err := client.Users.ListUsers(l)
+	if err != nil {
+		return fmt.Printf("%v", err)
+	}
+	if un != u[0].Username {
+		return fmt.Printf("%v", un)
+	}
+
+	return u[0].ID, nil
+}
+
+func resourceGitlabGroupMemberCreate(d *schema.ResourceData, meta interface{}) error {
+	// Bring in the gitlab Client
+	client := meta.(*gitlab.Client)
+
+	// Convert user_name to UserID
+	u, err := convertUNtoID(d.Get("user_name").(string), meta)
+	if err != nil {
+		return fmt.Errorf("%v", err)
+	}
+
+	// Type Covnert schema.TypeInt to gitlab.AccessLevelValue
+	a, ok := d.Get("access_level").(gitlab.AccessLevelValue)
 	if ok {
-		fmt.Printf("Int value is %d\n", aLevel)
+		fmt.Printf("Int value is %d\n", a)
 	} else {
-		fmt.Printf("Value is not a Int\n")
+		fmt.Println("wrong type for access level, expected int")
 	}
-	options := &gitlab.AddGroupMemberOptions{
-		UserID:      gitlab.Int(d.Get("user_id").(int)),
-		AccessLevel: gitlab.AccessLevel(aLevel),
+	// Define AddGroupMemberOptions with values from schema
+	l := &gitlab.AddGroupMemberOptions{
+		UserID:      gitlab.Int(u),
+		AccessLevel: gitlab.AccessLevel(a),
 	}
 
-	log.Printf("[DEBUG] create gitlab member %q", options.UserID)
-
-	member, _, err := client.Groups.AddGroupMember("test-group", options)
+	log.Printf("[DEBUG] create gitlab member %q", l.UserID)
+	// Execute the Addgroup MemberShip
+	m, _, err := client.Groups.AddGroupMember(d.Get("group_name"), l)
 	if err != nil {
 		return err
 	}
-
-	d.SetId(fmt.Sprintf("%d", member.ID))
+	// SetId to assert we created the record
+	d.SetId(fmt.Sprintf("%d", m.ID))
 
 	return nil
 }
@@ -70,6 +99,18 @@ func resourceGitlabGroupMemberUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceGitlabGroupMemberDelete(d *schema.ResourceData, meta interface{}) error {
-	fmt.Print("insidedelete")
+	client := meta.(*gitlab.Client)
+	t := d.Get("group_name")
+
+	// Aquire the UserID based on Username
+	n, err := convertUNtoID(d.Get("user_name").(string), meta)
+	if err != nil {
+		return fmt.Errorf("%v", err)
+	}
+
+	_, err1 := client.Groups.RemoveGroupMember(t, n)
+	if err1 != nil {
+		return fmt.Errorf("%v", err1)
+	}
 	return nil
 }
