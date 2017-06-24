@@ -5,7 +5,6 @@ import (
 	"log"
 
 	gitlab "github.com/xanzy/go-gitlab"
-	"github.com/y0ssar1an/q"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -27,9 +26,10 @@ func resourceGitlabGroupMember() *schema.Resource {
 				Required: true,
 			},
 			"access_level": {
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  30,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validateValueFunc([]string{"GuestPermissions", "ReporterPermissions", "DeveloperPermissions", "MasterPermissions", "OwnerPermission"}),
+				Default:      "DeveloperPermissions",
 			},
 		},
 	}
@@ -54,36 +54,44 @@ func convertUNtoID(un string, meta interface{}) (int, error) {
 	return u[0].ID, nil
 }
 
+// Handle String to AccessLevelValue Conversion
+func getAccessLevel(al string) gitlab.AccessLevelValue {
+	m := make(map[string]gitlab.AccessLevelValue)
+	m["GuestPermissions"] = gitlab.GuestPermissions
+	m["ReporterPermissions"] = gitlab.ReporterPermissions
+	m["DeveloperPermissions"] = gitlab.DeveloperPermissions
+	m["DeveloperPermissions"] = gitlab.MasterPermissions
+	m["OwnerPermission"] = gitlab.OwnerPermission
+	return m[al]
+}
+
 func resourceGitlabGroupMemberCreate(d *schema.ResourceData, meta interface{}) error {
 	// Bring in the gitlab Client
 	client := meta.(*gitlab.Client)
 
-	// Convert user_name to UserID
+	// Convert Schema user_name.(string) to gitlab.ID.(int)
 	u, err := convertUNtoID(d.Get("user_name").(string), meta)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
 
-	// Type Covnert schema.TypeInt to gitlab.AccessLevelValue
-	a, ok := d.Get("access_level").(gitlab.AccessLevelValue)
-	if ok {
-		fmt.Printf("Int value is %d\n", a)
-	} else {
-		fmt.Println("wrong type for access level, expected int")
-	}
-	q.Q(a, ok, d.Get("access_level"))
+	// Convert User input access_level.(string) to gitlab.AccessLevelValue
+	al := getAccessLevel(d.Get("access_level").(string))
+
 	// Define AddGroupMemberOptions with values from schema
 	l := &gitlab.AddGroupMemberOptions{
 		UserID:      gitlab.Int(u),
-		AccessLevel: gitlab.AccessLevel(a),
+		AccessLevel: gitlab.AccessLevel(al),
 	}
 
 	log.Printf("[DEBUG] create gitlab member %q", l.UserID)
+
 	// Execute the Addgroup MemberShip
 	m, _, err := client.Groups.AddGroupMember(d.Get("group_name"), l)
 	if err != nil {
 		return err
 	}
+
 	// SetId to assert we created the record
 	d.SetId(fmt.Sprintf("%d", m.ID))
 
